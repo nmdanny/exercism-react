@@ -1,6 +1,23 @@
 extern crate react;
-
+extern crate petgraph;
 use react::*;
+
+#[test]
+fn graph_works_correctly() {
+    let mut reactor = Reactor::new();
+    println!();
+    let five = reactor.create_input(5);
+    let two = reactor.create_input(2);
+    let plus = reactor.create_compute(&[two, five], |a| a[0] + a[1]).unwrap();
+    let sum = reactor.create_compute(&[plus, two], |a| a[0] + a[1]).unwrap();
+    assert_eq!(reactor.value(sum), Some(9));
+    reactor.set_value(two, 3).unwrap();
+    assert_eq!(reactor.value(five), Some(5));
+    assert_eq!(reactor.value(two), Some(3));
+    assert_eq!(reactor.value(plus), Some(8));
+    assert_eq!(reactor.value(sum), Some(11));
+    // sum = (five + two) + two
+}
 
 #[test]
 fn input_cells_have_a_value() {
@@ -91,7 +108,6 @@ fn error_setting_a_compute_cell() {
 }
 
 #[test]
-#[ignore]
 fn compute_cells_fire_callbacks() {
     // This is a bit awkward, but the closure mutably borrows `values`.
     // So we have to end its borrow by taking reactor out of scope.
@@ -115,7 +131,6 @@ fn error_adding_callback_to_nonexistent_cell() {
 }
 
 #[test]
-#[ignore]
 fn callbacks_only_fire_on_change() {
     let mut values = Vec::new();
     {
@@ -130,7 +145,6 @@ fn callbacks_only_fire_on_change() {
 }
 
 #[test]
-#[ignore]
 fn callbacks_can_be_added_and_removed() {
     let mut values1 = Vec::new();
     let mut values2 = Vec::new();
@@ -152,7 +166,6 @@ fn callbacks_can_be_added_and_removed() {
 }
 
 #[test]
-#[ignore]
 fn removing_a_callback_multiple_times_doesnt_interfere_with_other_callbacks() {
     let mut values1 = Vec::new();
     let mut values2 = Vec::new();
@@ -174,7 +187,6 @@ fn removing_a_callback_multiple_times_doesnt_interfere_with_other_callbacks() {
 }
 
 #[test]
-#[ignore]
 fn callbacks_should_only_be_called_once_even_if_multiple_dependencies_change() {
     let mut values = Vec::new();
     {
@@ -191,7 +203,6 @@ fn callbacks_should_only_be_called_once_even_if_multiple_dependencies_change() {
 }
 
 #[test]
-#[ignore]
 fn callbacks_should_not_be_called_if_dependencies_change_but_output_value_doesnt_change() {
     let mut values = Vec::new();
     {
@@ -200,8 +211,11 @@ fn callbacks_should_not_be_called_if_dependencies_change_but_output_value_doesnt
         let plus_one = reactor.create_compute(&vec![input], |v| v[0] + 1).unwrap();
         let minus_one = reactor.create_compute(&vec![input], |v| v[0] - 1).unwrap();
         let always_two = reactor.create_compute(&vec![plus_one, minus_one], |v| v[0] - v[1]).unwrap();
+        println!("We're interested in id {}", always_two.index());
+        let always_two_val = reactor.value(always_two);
         assert!(reactor.add_callback(always_two, |v| values.push(v)).is_ok());
         for i in 2..5 {
+            assert_eq!(reactor.value(always_two), always_two_val);
             assert!(reactor.set_value(input, i).is_ok());
         }
     }
